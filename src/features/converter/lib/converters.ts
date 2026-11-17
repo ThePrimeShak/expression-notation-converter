@@ -1,11 +1,12 @@
-import { PRECEDENCE, RIGHT_ASSOCIATIVE, BINARY_OPERATORS } from "@/constants";
-import type { ConversionResult, StackState } from "@/types";
-import { tokenize } from "@/utils/tokenize";
+import {
+  BINARY_OPERATORS,
+  PRECEDENCE,
+  RIGHT_ASSOCIATIVE,
+} from "@/features/converter/constants";
+import type { ConversionResult, StackState } from "@/features/converter/types";
 
-function isOperand(token: string): boolean {
-  // Check if token is a number (e.g., 12, 3.14) or variable (e.g., A, var)
-  return /^\d+(\.\d+)?$/.test(token) || /^[A-Za-z]+$/.test(token);
-}
+import { isOperand, wrapCompoundExpression } from "./expression";
+import { tokenize } from "./tokenize";
 
 function createStep(
   stack: string[],
@@ -212,7 +213,11 @@ export function infixToPrefix(input: string): ConversionResult {
         operatorStack.length &&
         operatorStack[operatorStack.length - 1] !== ")" &&
         BINARY_OPERATORS.includes(operatorStack[operatorStack.length - 1]) &&
-        PRECEDENCE[operatorStack[operatorStack.length - 1]] > PRECEDENCE[token]
+        (PRECEDENCE[operatorStack[operatorStack.length - 1]] >
+          PRECEDENCE[token] ||
+          (PRECEDENCE[operatorStack[operatorStack.length - 1]] ===
+            PRECEDENCE[token] &&
+            RIGHT_ASSOCIATIVE[token]))
       ) {
         const operator = operatorStack.pop()!;
         output.push(operator);
@@ -262,8 +267,20 @@ export function infixToPrefix(input: string): ConversionResult {
   return { result: prefixResult, steps };
 }
 
-export function postfixToInfix(input: string): ConversionResult {
-  const tokens = tokenize(input);
+type StackExpressionBuilder = (
+  operator: string,
+  leftOperand: string,
+  rightOperand: string
+) => string;
+
+function convertStackExpression(
+  input: string,
+  direction: "left-to-right" | "right-to-left",
+  buildExpression: StackExpressionBuilder
+): ConversionResult {
+  const inputTokens = tokenize(input);
+  const tokens =
+    direction === "right-to-left" ? inputTokens.reverse() : inputTokens;
   const stack: string[] = [];
   const steps: StackState[] = [];
   let stepIndex = 0;
@@ -275,147 +292,65 @@ export function postfixToInfix(input: string): ConversionResult {
       continue;
     }
 
-    if (BINARY_OPERATORS.includes(token)) {
-      if (stack.length < 2) {
-        return { error: `Operator ${token} requires 2 operands`, steps };
-      }
-
-      const operand2 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand2}`, stepIndex++));
-
-      const operand1 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand1}`, stepIndex++));
-
-      // Only add parentheses if operands are complex expressions
-      const needsParens1 = operand1.includes(" ");
-      const needsParens2 = operand2.includes(" ");
-
-      const expr1 = needsParens1 ? `( ${operand1} )` : operand1;
-      const expr2 = needsParens2 ? `( ${operand2} )` : operand2;
-      const expression = `${expr1} ${token} ${expr2}`;
-
-      stack.push(expression);
-      steps.push(createStep(stack, `push ${expression}`, stepIndex++));
-      continue;
+    if (!BINARY_OPERATORS.includes(token)) {
+      return { error: `Unknown token: ${token}`, steps };
+    }
+    if (stack.length < 2) {
+      return { error: `Operator ${token} requires 2 operands`, steps };
     }
 
-    return { error: `Unknown token: ${token}`, steps };
+    const firstPopped = stack.pop()!;
+    steps.push(createStep(stack, `pop ${firstPopped}`, stepIndex++));
+
+    const secondPopped = stack.pop()!;
+    steps.push(createStep(stack, `pop ${secondPopped}`, stepIndex++));
+
+    const [leftOperand, rightOperand] =
+      direction === "left-to-right"
+        ? [secondPopped, firstPopped]
+        : [firstPopped, secondPopped];
+    const expression = buildExpression(token, leftOperand, rightOperand);
+
+    stack.push(expression);
+    steps.push(createStep(stack, `push ${expression}`, stepIndex++));
   }
 
-  return { result: stack.join(" "), steps };
+  if (stack.length !== 1) {
+    return { error: "Expression did not resolve to a single result", steps };
+  }
+
+  return { result: stack[0], steps };
+}
+
+const buildInfixExpression: StackExpressionBuilder = (
+  operator,
+  leftOperand,
+  rightOperand
+) =>
+  `${wrapCompoundExpression(leftOperand)} ${operator} ${wrapCompoundExpression(rightOperand)}`;
+
+export function postfixToInfix(input: string): ConversionResult {
+  return convertStackExpression(input, "left-to-right", buildInfixExpression);
 }
 
 export function prefixToInfix(input: string): ConversionResult {
-  const tokens = tokenize(input).reverse();
-  const stack: string[] = [];
-  const steps: StackState[] = [];
-  let stepIndex = 0;
-
-  for (const token of tokens) {
-    if (isOperand(token)) {
-      stack.push(token);
-      steps.push(createStep(stack, `push ${token}`, stepIndex++));
-      continue;
-    }
-
-    if (BINARY_OPERATORS.includes(token)) {
-      if (stack.length < 2) {
-        return { error: `Operator ${token} requires 2 operands`, steps };
-      }
-
-      const operand1 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand1}`, stepIndex++));
-
-      const operand2 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand2}`, stepIndex++));
-
-      // Only add parentheses if operands are complex expressions
-      const needsParens1 = operand1.includes(" ");
-      const needsParens2 = operand2.includes(" ");
-
-      const expr1 = needsParens1 ? `( ${operand1} )` : operand1;
-      const expr2 = needsParens2 ? `( ${operand2} )` : operand2;
-      const expression = `${expr1} ${token} ${expr2}`;
-
-      stack.push(expression);
-      steps.push(createStep(stack, `push ${expression}`, stepIndex++));
-      continue;
-    }
-
-    return { error: `Unknown token: ${token}`, steps };
-  }
-
-  return { result: stack.join(" "), steps };
+  return convertStackExpression(input, "right-to-left", buildInfixExpression);
 }
 
 export function prefixToPostfix(input: string): ConversionResult {
-  const tokens = tokenize(input).reverse();
-  const stack: string[] = [];
-  const steps: StackState[] = [];
-  let stepIndex = 0;
-
-  for (const token of tokens) {
-    if (isOperand(token)) {
-      stack.push(token);
-      steps.push(createStep(stack, `push ${token}`, stepIndex++));
-      continue;
-    }
-
-    if (BINARY_OPERATORS.includes(token)) {
-      if (stack.length < 2) {
-        return { error: `Operator ${token} requires 2 operands`, steps };
-      }
-
-      const operand1 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand1}`, stepIndex++));
-
-      const operand2 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand2}`, stepIndex++));
-
-      const postfixExpr = `${operand1} ${operand2} ${token}`;
-      stack.push(postfixExpr);
-      steps.push(createStep(stack, `push ${postfixExpr}`, stepIndex++));
-      continue;
-    }
-
-    return { error: `Unknown token: ${token}`, steps };
-  }
-
-  return { result: stack.join(" "), steps };
+  return convertStackExpression(
+    input,
+    "right-to-left",
+    (operator, leftOperand, rightOperand) =>
+      `${leftOperand} ${rightOperand} ${operator}`
+  );
 }
 
 export function postfixToPrefix(input: string): ConversionResult {
-  const tokens = tokenize(input);
-  const stack: string[] = [];
-  const steps: StackState[] = [];
-  let stepIndex = 0;
-
-  for (const token of tokens) {
-    if (isOperand(token)) {
-      stack.push(token);
-      steps.push(createStep(stack, `push ${token}`, stepIndex++));
-      continue;
-    }
-
-    if (BINARY_OPERATORS.includes(token)) {
-      if (stack.length < 2) {
-        return { error: `Operator ${token} requires 2 operands`, steps };
-      }
-
-      const operand2 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand2}`, stepIndex++));
-
-      const operand1 = stack.pop()!;
-      steps.push(createStep(stack, `pop ${operand1}`, stepIndex++));
-
-      const prefixExpr = `${token} ${operand1} ${operand2}`;
-      stack.push(prefixExpr);
-      steps.push(createStep(stack, `push ${prefixExpr}`, stepIndex++));
-      continue;
-    }
-
-    return { error: `Unknown token: ${token}`, steps };
-  }
-
-  return { result: stack.join(" "), steps };
+  return convertStackExpression(
+    input,
+    "left-to-right",
+    (operator, leftOperand, rightOperand) =>
+      `${operator} ${leftOperand} ${rightOperand}`
+  );
 }

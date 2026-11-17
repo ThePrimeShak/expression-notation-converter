@@ -20,6 +20,28 @@ This project was created for the **Compiler Design Principles** course as part o
 - **Tailwind CSS** - Utility-first styling
 - **Framer Motion** - Smooth animations for stack visualization
 
+## 🗂️ Project Structure
+
+```text
+src/
+├── components/
+│   ├── icons/                 # Shared SVG icon components
+│   └── layout/                # Header and footer
+├── features/
+│   └── converter/
+│       ├── components/        # Converter-specific UI
+│       ├── lib/               # Tokenizing, validation, and algorithms
+│       ├── constants.ts       # Operators and precedence rules
+│       └── types.ts           # Converter domain types
+├── styles/                    # Global theme and styles
+├── App.tsx                    # Application composition
+└── main.tsx                   # React entry point
+```
+
+The converter feature is self-contained: UI components depend on its public
+types and orchestration layer, while parsing and conversion logic remain
+framework-independent and independently testable.
+
 ## 🧮 Algorithms
 
 ### Infix → Postfix/Prefix

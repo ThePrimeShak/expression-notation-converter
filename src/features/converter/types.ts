@@ -1,4 +1,4 @@
-/** Available notation types for mathematical expressions */
+/** Available notation types for mathematical expressions. */
 export type Notation = "infix" | "postfix" | "prefix";
 
 /** Represents a single token in an expression */
@@ -35,3 +35,11 @@ export type ConversionResult = {
   /** Error message if conversion failed */
   error?: string;
 };
+
+/** Conversion results indexed by notation. */
+export type ConversionResults = Record<Notation, ConversionResult>;
+
+/** Result returned by the converter orchestration layer. */
+export type ConversionOutcome =
+  | { success: true; results: ConversionResults }
+  | { success: false; error: string };

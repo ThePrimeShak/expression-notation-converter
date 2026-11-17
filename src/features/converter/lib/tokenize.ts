@@ -3,6 +3,8 @@
  * Supports expressions with or without spaces
  * Handles operators, parentheses, numbers, and variables
  */
+const WHITESPACE_PATTERN = /\s/;
+
 export function tokenize(input: string): string[] {
   const tokens: string[] = [];
   let currentToken = "";
@@ -18,8 +20,8 @@ export function tokenize(input: string): string[] {
   const parentheses = "()";
 
   for (const char of input) {
-    // Skip spaces
-    if (char === " ") {
+    // Treat any whitespace as a token separator.
+    if (WHITESPACE_PATTERN.test(char)) {
       pushCurrentToken();
       continue;
     }
