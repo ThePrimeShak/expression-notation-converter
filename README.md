@@ -1,81 +1,56 @@
-# 🔄 Expression Notation Converter
+# Expression Notation Converter
 
-> A visual tool for converting between **Infix**, **Postfix**, and **Prefix** notations with step-by-step visualization.
+An expression notation visualizer built with React and TypeScript for a university compiler course.
 
-## 📚 About
+**Live demo:** [Open on Vercel](https://expression-notation-converter.vercel.app)
 
-This project was created for the **Compiler Design Principles** course as part of a Bachelor's degree program. It demonstrates fundamental concepts in expression parsing and notation conversion algorithms.
+## Overview
 
-## ✨ Features
+Created for the university Compiler Design Principles course to explain conversion between infix, postfix, and prefix notation.
 
-- 🔁 **Bi-directional Conversion**: Convert between Infix ↔️ Postfix ↔️ Prefix notations
-- 📊 **Visual Stack Simulation**: Watch the algorithm work in real-time with animated stack operations
-- 🎯 **Step-by-Step Breakdown**: Navigate through each conversion step to understand the process
-- ✅ **Expression Validation**: Automatic validation with helpful error messages
+## Features
 
-## 🛠️ Technologies Used
+- Convert in all six directions between infix, postfix, and prefix.
+- Inspect validation feedback and step-by-step stack operations.
+- Animate the conversion process with Framer Motion.
+- Handle identifiers, decimal numbers, binary arithmetic operators, and parentheses.
 
-- **React** + **TypeScript** - Modern UI framework with type safety
-- **Vite** - Fast build tool and dev server
-- **Tailwind CSS** - Utility-first styling
-- **Framer Motion** - Smooth animations for stack visualization
+## Tech stack
 
-## 🗂️ Project Structure
+React 19, TypeScript, Vite, Tailwind CSS, Framer Motion.
 
-```text
-src/
-├── components/
-│   ├── icons/                 # Shared SVG icon components
-│   └── layout/                # Header and footer
-├── features/
-│   └── converter/
-│       ├── components/        # Converter-specific UI
-│       ├── lib/               # Tokenizing, validation, and algorithms
-│       ├── constants.ts       # Operators and precedence rules
-│       └── types.ts           # Converter domain types
-├── styles/                    # Global theme and styles
-├── App.tsx                    # Application composition
-└── main.tsx                   # React entry point
-```
+## Run locally
 
-The converter feature is self-contained: UI components depend on its public
-types and orchestration layer, while parsing and conversion logic remain
-framework-independent and independently testable.
+Use Node.js 22.12 or newer and npm.
 
-## 🧮 Algorithms
-
-### Infix → Postfix/Prefix
-
-Uses the **Shunting-yard Algorithm** with two stacks:
-
-- **Output Stack**: Builds the final result
-- **Operator Stack**: Manages operator precedence and parentheses
-
-### Postfix/Prefix → Infix
-
-Uses a **Single Stack Algorithm**:
-
-- Processes tokens and combines operands with operators to rebuild infix expressions
-
-## 🚀 Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server
+```sh
+git clone https://github.com/ThePrimeShak/expression-notation-converter.git
+cd expression-notation-converter
+npm ci
 npm run dev
-
-# Build for production
-npm run build
 ```
 
-## 🧪 Test Examples
+## Available scripts
 
-**Infix:** `A * (B + C / D) - E ^ F`  
-**Postfix:** `A B C D / + * E F ^ -`  
-**Prefix:** `- * A + B / C D ^ E F`
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Create the production build |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Check code with ESLint |
+| `npm run lint:fix` | Apply ESLint fixes |
+| `npm run format` | Format project files |
+| `npm run format:check` | Check formatting |
 
----
+## Project structure
 
-Made with 💻 for Compiler Design Principles course
+- `src/features/converter/` — tokenization, validation, algorithms, and feature UI.
+- `src/components/` and `src/styles/` — shared layout, icons, and global styling.
+
+## Scope and limitations
+
+Supports binary `+`, `-`, `*`, `/`, and `^`. Unary negative operands and root functions are outside the current grammar. Example: `A * (B + C / D) - E ^ F`.
+
+## Author
+
+Built by [ThePrimeShak](https://github.com/ThePrimeShak) · [LinkedIn](https://www.linkedin.com/in/theprimeshak/).
